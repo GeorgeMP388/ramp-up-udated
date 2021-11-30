@@ -1,10 +1,10 @@
  #1 Create a VPC
 resource "aws_vpc" "ramp-vpc" {
-    cidr_block = "10.0.0.0/16"
-        tags ={
-            Name = "Ramp-up"
+  cidr_block = "10.0.0.0/16"
+  tags ={
+      Name = "Ramp-up"
   }
- }
+}
 
  #2 Create internet Gateway
 resource "aws_internet_gateway" "gw" {
@@ -15,9 +15,12 @@ resource "aws_internet_gateway" "gw" {
 }
 
  #2.1 create NAT gwateway
+resource "aws_eip" "nat-eip" {
+}
 resource "aws_nat_gateway" "nat" {
-  subnet_id     = aws_subnet.public_subnet1.id
-    tags = {
+  allocation_id = aws_eip.nat-eip.id
+  subnet_id     = aws_subnet.subnet-1.id
+  tags = {
     Name        = "nat"
   }
 }
@@ -26,13 +29,13 @@ resource "aws_nat_gateway" "nat" {
 resource "aws_route_table" "ramp-public-rout-table" {
   vpc_id = aws_vpc.ramp-vpc.id
   route  {
-      cidr_block = "0.0.0.0/0"
-      gateway_id = aws_internet_gateway.gw.id
-    }
-    route {
-      ipv6_cidr_block        = "::/0"
-      gateway_id= aws_internet_gateway.gw.id
-    }
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.gw.id
+  }
+  route {
+    ipv6_cidr_block        = "::/0"
+    gateway_id= aws_internet_gateway.gw.id
+  }
 
   tags = {
     Name = "Ramp-public"
@@ -43,14 +46,9 @@ resource "aws_route_table" "ramp-public-rout-table" {
 resource "aws_route_table" "ramp-privet-rout-table" {
   vpc_id = aws_vpc.ramp-vpc.id
   route  {
-      cidr_block = "0.0.0.0/0"
-      gateway_id = aws_nat_gateway.nat.id
-    }
-    route {
-      ipv6_cidr_block        = "::/0"
-      gateway_id= aws_nat_gateway.nat.id
-    }
-
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_nat_gateway.nat.id
+  }
   tags = {
     Name = "Ramp-privet"
   }
@@ -65,7 +63,7 @@ resource "aws_subnet" "subnet-1" {
   tags = {
     Name = "Ramp-subnet1"
   }
- }
+}
 
  #4.1 Create subnet 2
 resource "aws_subnet" "subnet-2" {
@@ -76,7 +74,7 @@ resource "aws_subnet" "subnet-2" {
   tags = {
     Name = "Ramp-subnet2"
   }
- }
+}
 
  #4.2 Create a Privet subnet
 resource "aws_subnet" "subnet-3" {
@@ -87,7 +85,7 @@ resource "aws_subnet" "subnet-3" {
   tags = {
     Name = "Ramp-subnet3"
   }
- }
+}
 
  #5 Associate subnet with a route table
 resource "aws_route_table_association" "public1" {
@@ -96,7 +94,7 @@ resource "aws_route_table_association" "public1" {
 }
  #5.1 Associate subnet with a route table
 resource "aws_route_table_association" "privet" {
-  subnet_id      = aws_subnet.subnet-1.id
+  subnet_id      = aws_subnet.subnet-3.id
   route_table_id = aws_route_table.ramp-privet-rout-table.id
 }
 
@@ -121,33 +119,33 @@ resource "aws_lb" "ramp_lb" {
   }
 }
 
- resource "aws_lb_listener" "front_end" {
-  load_balancer_arn = aws_lb.ramp_lb.arn
-  port              = "80"
-  protocol          = "HTTP"
+#  resource "aws_lb_listener" "front_end" {
+#   load_balancer_arn = aws_lb.ramp_lb.arn
+#   port              = "80"
+#   protocol          = "HTTP"
 
-  default_action {
-    type             = "forward"
-    target_group_arn = aws_lb_target_group.target_group.arn
-  }
- }
+#   default_action {
+#     type             = "forward"
+#     target_group_arn = aws_lb_target_group.target_group.arn
+#   }
+#  }
 
- resource "aws_lb_target_group_attachment" "lb_front1" {
-  target_group_arn = aws_lb_target_group.target_group.arn
-  target_id        = aws_instance.front1.id
-  port             = 80
-}
+#  resource "aws_lb_target_group_attachment" "lb_front1" {
+#   target_group_arn = aws_lb_target_group.target_group.arn
+#   target_id        = aws_instance.front1.id
+#   port             = 80
+# }
 
-resource "aws_lb_target_group_attachment" "lb_front2" {
-  target_group_arn = aws_lb_target_group.target_group.arn
-  target_id        = aws_instance.front2.id
-  port             = 80
-}
+# resource "aws_lb_target_group_attachment" "lb_front2" {
+#   target_group_arn = aws_lb_target_group.target_group.arn
+#   target_id        = aws_instance.front2.id
+#   port             = 80
+# }
 
-resource "aws_lb_target_group" "target_group"{
-  name     = "tf-lb-tg"
-  port     = 80
-  protocol = "HTTP"
-  vpc_id   = aws_vpc.ramp-vpc.id
+# resource "aws_lb_target_group" "target_group"{
+#   name     = "tf-lb-tg"
+#   port     = 80
+#   protocol = "HTTP"
+#   vpc_id   = aws_vpc.ramp-vpc.id
 
-}
+# }
