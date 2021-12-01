@@ -26,16 +26,20 @@ resource "aws_instance" "Jump-box" {
   user_data = <<-EOF
     #!/bin/bash
     amazon-linux-extras install epel docker  -y
+    service docker start
+    usermod -a -G docker ec2-user
     yum update
     wget -O /etc/yum.repos.d/jenkins.repo \
       https://pkg.jenkins.io/redhat-stable/jenkins.repo
     rpm --import https://pkg.jenkins.io/redhat-stable/jenkins.io.key
     yum upgrade -y
     yum install jenkins java-1.8.0-openjdk-devel -y
+    usermod -aG docker jenkins
     systemctl daemon-reload
     systemctl start jenkins
     systemctl status jenkins
   EOF
+
   tags = merge(local.tags, {Name = "jenkins"})
 }
 
@@ -46,6 +50,7 @@ resource "aws_instance" "front1" {
   key_name = var.key_name
   vpc_security_group_ids = [ aws_security_group.allow_front.id ]
   subnet_id = aws_subnet.subnet-1.id
+  user_data = local.frontend_user_data
   tags = merge(local.tags, {Name = "frontend"})
 }
 
@@ -57,6 +62,7 @@ resource "aws_instance" "front2" {
   key_name = var.key_name
   vpc_security_group_ids = [ aws_security_group.allow_front.id ]
   subnet_id = aws_subnet.subnet-2.id
+  user_data = local.frontend_user_data
   tags = merge(local.tags, {Name = "frontend"})
 }
 
